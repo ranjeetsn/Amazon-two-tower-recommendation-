@@ -15,14 +15,13 @@ query = st.text_input("Enter your product query:", "")
 if st.button('Search') and query:
     response = requests.post(
         f"http://{args.host}:8000/search",
-        json={"query": query},  # Ensure the keys and structure match the FastAPI expectations
+        json={"query": query}, 
         headers={'Content-Type': 'application/json'}
     )
     print(f"http://{args.host}:8000/search")
     if response.status_code == 200:
         results = response.json().get('results', [])
         if results:
-            # Display each result in a point-wise fashion
             for idx, result in enumerate(results):
                 st.write(f"{idx + 1}. {result}")
         else:

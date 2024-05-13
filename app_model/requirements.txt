@@ -1,103 +1,10 @@
 tensorflow==2.15.0
 keras==2.15.0
-# absl-py==2.1.0
-# altair==5.3.0
-# annotated-types==0.6.0
 annoy==1.17.3
-# astunparse==1.6.3
-# blinker==1.8.2
-# Bottleneck==1.3.8
-# cachetools==5.3.3
-# click==8.1.7
-# dnspython==2.6.1
-# email_validator==2.1.1
-fastapi==0.111.0   # shrey
-# fastapi-cli==0.0.3
-# filelock==3.14.0
-# flatbuffers==24.3.25
-# fsspec==2024.3.1
-# gast==0.5.4
-# gitdb==4.0.11
-# GitPython==3.1.43
-# google-api-core==2.19.0
-# google-auth==2.29.0
-# google-auth-oauthlib==1.2.0
-# google-cloud-core==2.4.1
-google-cloud-storage==2.16.0   # shrey
-# google-crc32c==1.5.0
-# google-pasta==0.2.0
-# google-resumable-media==2.7.0
-# googleapis-common-protos==1.63.0
-# grpcio==1.63.0
-# h11==0.14.0
-# h5py==3.11.0
-# httpcore==1.0.5
-# httptools==0.6.1
-# httpx==0.27.0
-# huggingface-hub==0.23.0
-# joblib==1.4.2
-
-# libclang==18.1.1
-# Markdown==3.6
-# markdown-it-py==3.0.0
-# mdurl==0.1.2
-# ml-dtypes==0.2.0
-# mpmath==1.3.0
-# networkx==3.3
-numpy==1.26.4    # shrey
-# oauthlib==3.2.2
-# opt-einsum==3.3.0
-# orjson==3.10.3
-pandas==2.2.2    # shrey
-# pillow==10.3.0
-# ply==3.11
-# proto-plus==1.23.0
-# protobuf==4.25.3
-# pyarrow==16.0.0
-# pyasn1==0.6.0
-# pyasn1_modules==0.4.0
-pydantic==2.7.1   # shrey
-# pydantic_core==2.18.2   # shrey
-# pydeck==0.9.1
-# PyQt5==5.15.10
-# python-dotenv==1.0.1
-# python-multipart==0.0.9
-# regex==2024.5.10
-# requests-oauthlib==2.0.0
-# rich==13.7.1
-# rsa==4.9
-# safetensors==0.4.3
-# scikit-learn==1.4.2
-# scipy==1.13.0
-sentence-transformers==2.7.0  #   # shrey
-# shellingham==1.5.4
-# smmap==5.0.1
-# starlette==0.37.2
-# streamlit==1.34.0
-# sympy==1.12
-# tenacity==8.3.0
-# tensorboard==2.15.2
-# tensorboard-data-server==0.7.2
-
-# tensorflow-estimator==2.15.0
-# tensorflow-io-gcs-filesystem==0.37.0
-# tensorflow-macos==2.15.0
-# termcolor==2.4.0
-# threadpoolctl==3.5.0
-# tokenizers==0.19.1
-# toml==0.10.2
-# toolz==0.12.1
-# torch==2.3.0
-# tqdm==4.66.4
-# transformers==4.40.2
-# typer==0.12.3
-# tzdata==2024.1
-# ujson==5.9.0
+fastapi==0.111.0  
+google-cloud-storage==2.16.0 
+numpy==1.26.4    
+pandas==2.2.2  
+pydantic==2.7.1 
+sentence-transformers==2.7.0  
 uvicorn==0.29.0
-# uvloop==0.19.0
-# watchfiles==0.21.0
-# webencodings==0.5.1
-# websockets==12.0
-# Werkzeug==3.0.3
-# wrapt==1.14.1
-
