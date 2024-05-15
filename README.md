@@ -36,11 +36,11 @@
 
 ## Demo
 
-[![Watch the video](assets/two-tower-model-architecture.png)]([https://github.com/ranjeetsn/Amazon-two-tower-recommendation-/blob/33604652bf7b1b43f0e7cdb1d305800fafade0ba/assets/Video_presentation.mp4](https://drive.google.com/file/d/1nfVrvzBvqONwoygTUTdnzbHxnfwgroDM/view?usp=drive_link)
+[![Watch the video]([https://drive.google.com/file/d/1nfVrvzBvqONwoygTUTdnzbHxnfwgroDM/view?usp=drive_link](https://github.com/ranjeetsn/Amazon-two-tower-recommendation-/assets/30920464/c2a2df78-cec4-422e-9ee8-c8b916d4da96))
 
 
 
-https://github.com/ranjeetsn/Amazon-two-tower-recommendation-/assets/30920464/c2a2df78-cec4-422e-9ee8-c8b916d4da96
+
 
 
 
