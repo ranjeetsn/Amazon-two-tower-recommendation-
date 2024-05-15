@@ -36,12 +36,7 @@
 
 ## Demo
 
-[Watch the video](https://github.com/ranjeetsn/Amazon-two-tower-recommendation-/assets/30920464/c2a2df78-cec4-422e-9ee8-c8b916d4da96)
-
-
-
-
-
+https://github.com/ranjeetsn/Amazon-two-tower-recommendation-/assets/30920464/c2a2df78-cec4-422e-9ee8-c8b916d4da96
 
 
 ## Quick Start
