@@ -36,7 +36,7 @@
 
 ## Demo
 
-[(Watch the video)(path/to/thumbnail.jpg)]([https://github.com/ranjeetsn/Amazon-two-tower-recommendation-/blob/33604652bf7b1b43f0e7cdb1d305800fafade0ba/assets/Video_presentation.mp4](https://drive.google.com/file/d/1nfVrvzBvqONwoygTUTdnzbHxnfwgroDM/view?usp=drive_link)
+[![Watch the video](path/to/thumbnail.jpg)]([https://github.com/ranjeetsn/Amazon-two-tower-recommendation-/blob/33604652bf7b1b43f0e7cdb1d305800fafade0ba/assets/Video_presentation.mp4](https://drive.google.com/file/d/1nfVrvzBvqONwoygTUTdnzbHxnfwgroDM/view?usp=drive_link)
 
 
 ## Quick Start
