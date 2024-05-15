@@ -36,7 +36,7 @@
 
 ## Demo
 
-[![Watch the video]([https://drive.google.com/file/d/1nfVrvzBvqONwoygTUTdnzbHxnfwgroDM/view?usp=drive_link](https://github.com/ranjeetsn/Amazon-two-tower-recommendation-/assets/30920464/c2a2df78-cec4-422e-9ee8-c8b916d4da96))
+[Watch the video]([https://drive.google.com/file/d/1nfVrvzBvqONwoygTUTdnzbHxnfwgroDM/view?usp=drive_link](https://github.com/ranjeetsn/Amazon-two-tower-recommendation-/assets/30920464/c2a2df78-cec4-422e-9ee8-c8b916d4da96)
 
 
 
