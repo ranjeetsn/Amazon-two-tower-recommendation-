@@ -36,7 +36,7 @@
 
 ## Demo
 
-https://github.com/msds603-startup8/RehearsAI-server/assets/137837017/b0e32a40-1a4b-47dd-b729-7102827b0179
+https://github.com/ranjeetsn/Amazon-two-tower-recommendation-/blob/d9a6e98a50b32fbe0847fc73e2b494db09bc2877/assets/Video_presentation.mp4
 
 
 
