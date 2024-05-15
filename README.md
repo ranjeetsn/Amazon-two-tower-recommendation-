@@ -36,7 +36,7 @@
 
 ## Demo
 
-[Watch the video]()
+[Watch the video](https://github.com/ranjeetsn/Amazon-two-tower-recommendation-/blob/33604652bf7b1b43f0e7cdb1d305800fafade0ba/assets/Video_presentation.mp4)
 
 
 ## Quick Start
