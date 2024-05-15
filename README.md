@@ -6,125 +6,93 @@
 - An insight to the structure of the source code:
 ```
 🌳 project
+.
 ├── README.md
-├── services
-│   ├── fastapi
-│   │   ├── Dockerfile
-│   │   ├── app.py
-│   │   └── requirements.txt
-├── test
-│   └── test_example.py
+├── Testing-Model.ipynb
+├── Two-Tower-model-training.ipynb
+├── app_model
+│   ├── Dockerfile
+│   ├── app
+│   │   └── app.py
+│   ├── model
+│   │   ├── __init__.py
+│   │   ├── config.py
+│   │   └── model_handler.py
+│   └── requirements.txt
+├── best_model_weights.keras
+├── folder_structure.txt
+├── models
+│   ├── full_model.pth
+│   ├── product_dictionary.json
+│   ├── product_model.tree
+│   └── recommendation_model.h5
+├── product_model.tree
+├── recommendation_model.h5
+└── streamlit
+    ├── Dockerfile
+    ├── main.py
+    └── requirements.txt
 ```
 
 ## Demo
-
 
 https://github.com/msds603-startup8/RehearsAI-server/assets/137837017/b0e32a40-1a4b-47dd-b729-7102827b0179
 
 
 
 ## Quick Start
-### Local Environment Setup
-1) Set Up OpenAI API Key:
-   - Generate and export your OpenAI API key to enable API calls necessary for the application: ```export OPENAI_API_KEY=your_api_key_here```
-2) Prepare Conda Environments:
-   - Create two separate Conda environments to manage dependencies for Streamlit and FastAPI components:
-   - Streamlit Environment: For running the Streamlit application.
-   - FastAPI Environment: For handling API requests using FastAPI.
-3) Install Required Packages:
-   - Install the necessary Python packages in each environment:
-```console
-# Streamlit requirements
-(streamlit) pip install -r ./services/streamlit/requirements.txt
+# Two-Tower Recommendation System
 
-# FastAPI requirements
-(fastapi) pip install -r ./services/fastapi/requirements.txt
-```
-4) Run Servers
-   - Launch both the Streamlit and FastAPI servers:
-```console
-# Streamlit server
-(streamlit) cd services/streamlit; streamlit run app.py
+This project implements a two-tower recommendation system using FastAPI and Streamlit. It features a FastAPI server to handle backend operations and a Streamlit application for the frontend interface.
 
-# FastAPI server
-(fastapi) uvicorn services.fastapi.app:app --port 8000 --reload
-```
+## Local Environment Setup
 
-### Docker Container Setup
-To deploy the application using Docker, follow these instructions:
-1) Install Docker:
-   - Install Docker if it is not already installed on your system.
-2) Build Docker Images:
-   - Create Docker images for both the Streamlit and FastAPI components:
-```
-# Build Streamlit image
-docker build --no-cache -t streamlit -f ./services/streamlit/Dockerfile ./services/streamlit
+### Prerequisites
+- Python 3.10.12
+- Conda (Anaconda or Miniconda)
 
-# Build FastAPI image
-docker build --no-cache -t fastapi -f ./services/fastapi/Dockerfile ./services/fastapi
-```
-3) Run the Servers:
-- Start both servers using Docker:
-```
-# Run FastAPI server
-docker run -e "OPENAI_API_KEY={your_openai_api_key}" -p 8000:8000 fastapi
+### Setup Steps
 
-# Run Streamlit server
-docker run -e "OPENAI_API_KEY={your_openai_api_key}" -p 8080:8080 streamlit -- --host host.docker.internal
-```
-- Access the demo at http://localhost:8080.
+1. **Clone the Repository**
+   git clone [<repository-url>]https://github.com/ranjeetsn/Amazon-two-tower-recommendation-.git
+   cd Amazon-two-tower-recommendation-
 
-### Follow these steps to run the demo and application locally:
-1) Set-up OPENAI_API_KEY:
-    - Creating and exporting your own OpenAI API key will allow you to make the necessary API calls to run our application. If you don't have an OpenAI key, visit the [OpenAI website.](https://platform.openai.com/signup)
-```bash
-export OPENAI_API_KEY=...
-```
+2. **Create Conda Environments**
+   - Create and activate separate Conda environments for Streamlit and FastAPI:
+     conda create -n streamlit python=3.10.12
+     conda activate streamlit
+     pip install -r ./streamlit/requirements.txt
 
-2) Prepare two conda environments:
-   - The Streamlit environment will allow you to run the application in your local environment, and the the FastAPI environment will allow your machine to make the necessary calls to access the OpenAI APIs to run the model.
-     - Streamlit
-     - FastAPI
-  - In order to run the concurrent environments, you will need two separate environments to allow the server to interact with the client side of the application.
+     conda create -n fastapi python=3.10.12
+     conda activate fastapi
+     pip install -r ./app_model/requirements.txt
 
-  - Install required packages and libraries in respective conda environments:
-```bash
-(streamlit) pip install -r ./services/streamlit/requirements.txt
-(fastapi) pip install -r ./services/fastapi/requirements.txt
-```
+3. **Run Servers**
+   - Start the FastAPI server:
+     (fastapi) uvicorn app_model.app.app:app --host 0.0.0.0 --port 8000
+   
+   - Start the Streamlit server:
+     (streamlit) streamlit run streamlit/main.py
 
-  - Run the Streamlit server & FastAPI server
-```bash
-(streamlit) streamlit run ./services/streamlit/app.py
-(fastapi) uvicorn services.fastapi.app:app --port 8000
-```
+## Docker Container Setup
 
-## Quick Start (In Docker Container)
-- In order to run the application, it is recommended that you Dockerize the Streamlit application and the FastAPI source code to allow the services to run concurrently and serve multiple users at the same time. 
+### Build and Run Docker Containers
 
-- Install docker
-https://docs.docker.com/engine/install/
+1. **Install Docker**
+   - Ensure Docker is installed on your system by following the instructions at Docker Installation Guide (https://docs.docker.com/engine/install/).
 
-- Set-up docker images:
-```bash
-docker build --no-cache \
-    -t streamlit \
-    -f ./services/streamlit/Dockerfile \
-    ./services/streamlit
+2. **Build Docker Images**
+   docker build --no-cache -t streamlit -f ./streamlit/Dockerfile ./streamlit
+   docker build --no-cache -t fastapi -f ./app_model/Dockerfile ./app_model
 
-docker build --no-cache \
-    -t fastapi \
-    -f ./services/fastapi/Dockerfile \
-    ./services/fastapi
-```
+3. **Run the Docker Containers**
+   docker run -p 8000:8000 fastapi
+   docker run -p 8080:8080 streamlit -- --host host.docker.internal
 
-- Run the web server and the client application:
-```bash
-# Run fastapi server
-docker run -e "OPENAI_API_KEY={your_openai_api_key}" -p 8000:8000 fastapi
+### Access the Application
 
-# Run streamlit server
-docker run -e "OPENAI_API_KEY={your_openai_api_key}" -p 8080:8080 streamlit -- --host host.docker.internal
-```
+- Open your web browser and access the Streamlit interface at http://localhost:8080.
 
-- Now you can see the demo at http://0.0.0.0:8080
+## Support
+
+For any issues or questions, please open an issue on the GitHub repository or contact the development team.
