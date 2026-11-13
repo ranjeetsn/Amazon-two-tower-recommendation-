@@ -6,3 +6,4 @@ xgboost
 tensorflow==2.15.0
 streamlit
 requests
+ipykernel
