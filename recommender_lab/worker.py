@@ -30,8 +30,8 @@ def run_worker():
         f"Retraining worker is watching SQLite for {threshold} new labeled pairs."
     )
     while True:
-        current_count = feedback_count()
-        pending = current_count - last_trained_feedback_count()
+        count_at_start = feedback_count()
+        pending = count_at_start - last_trained_feedback_count()
 
         if pending >= threshold:
             run_id = mark_training_started(pending)
@@ -48,6 +48,7 @@ def run_worker():
                     "succeeded",
                     model_version=version,
                     message=f"Trained with {len(feedback)} unique feedback pairs.",
+                    trained_through_feedback_count=count_at_start,
                 )
                 print(f"Published model version {version}.")
             except Exception as exc:
