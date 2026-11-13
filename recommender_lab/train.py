@@ -33,22 +33,28 @@ def _merge_product_fields(pairs, products):
     catalog = catalog[keep].drop_duplicates("product_id")
 
     merged = pairs.merge(catalog, on="product_id", how="left", suffixes=("", "_catalog"))
-    if "product_title" not in merged.columns:
-        merged["product_title"] = merged["product_title_catalog"]
-    else:
-        merged["product_title"] = merged["product_title"].fillna(
-            merged.get("product_title_catalog")
-        )
-    if "product_brand_catalog" in merged.columns:
-        if "product_brand" not in merged.columns:
-            merged["product_brand"] = merged["product_brand_catalog"]
+    if "product_title_catalog" in merged.columns:
+        if "product_title" in merged.columns:
+            merged["product_title"] = merged["product_title"].fillna(
+                merged["product_title_catalog"]
+            )
         else:
+            merged["product_title"] = merged["product_title_catalog"]
+    elif "product_title" not in merged.columns:
+        merged["product_title"] = ""
+
+    if "product_brand_catalog" in merged.columns:
+        if "product_brand" in merged.columns:
             merged["product_brand"] = merged["product_brand"].fillna(
                 merged["product_brand_catalog"]
             )
-    merged["product_title"] = merged["product_title"].fillna("").astype(str)
-    if "product_brand" not in merged.columns:
+        else:
+            merged["product_brand"] = merged["product_brand_catalog"]
+    elif "product_brand" not in merged.columns:
         merged["product_brand"] = ""
+
+    merged["product_title"] = merged["product_title"].fillna("").astype(str)
+    merged["product_brand"] = merged["product_brand"].fillna("").astype(str)
     return merged
 
 
@@ -57,7 +63,7 @@ def _load_training_pairs(examples_path, products, feedback_df=None):
     if "query_id" not in examples.columns:
         examples["query_id"] = examples["query"].astype(str)
 
-    # If the source file has an official split, never train on its held-out rows.
+    # Keep the supplied training partition; held-out source rows never enter fitting.
     if "split" in examples.columns:
         is_train = examples["split"].astype(str).str.lower().isin({"train", "training"})
         if is_train.any():
@@ -72,11 +78,6 @@ def _load_training_pairs(examples_path, products, feedback_df=None):
         feedback["query_id"] = "live:" + feedback["query_id"].astype(str)
         feedback["esci_label"] = feedback["esci_label"].astype(str).str.upper()
         feedback = _merge_product_fields(feedback, products)
-        # Keep stored titles for any interaction product absent from the catalog snapshot.
-        if "product_title_x" in feedback.columns and "product_title_y" in feedback.columns:
-            feedback["product_title"] = (
-                feedback["product_title_x"].fillna(feedback["product_title_y"]).fillna("")
-            )
         examples = pd.concat([examples, feedback], ignore_index=True, sort=False)
 
     examples = examples[
@@ -102,16 +103,6 @@ def _group_split(frame, test_size=0.2):
     )
 
 
-def _sort_for_ranking(frame, features, labels):
-    data = frame.assign(_label=labels.to_numpy())
-    data = data.sort_values("query_id", kind="mergesort").reset_index(drop=True)
-    X = features.loc[data.index] if features.index.equals(data.index) else None
-    # Rebuild features in exactly the same sorted row order.
-    X = data[FEATURE_COLUMNS].copy() if set(FEATURE_COLUMNS).issubset(data.columns) else X
-    group_sizes = data.groupby("query_id", sort=False).size().tolist()
-    return data, group_sizes
-
-
 def train_from_files(examples_path, products_path, feedback_df=None, artifact_root=None):
     products = load_products(products_path)
     pairs = _load_training_pairs(examples_path, products, feedback_df)
@@ -121,13 +112,13 @@ def train_from_files(examples_path, products_path, feedback_df=None, artifact_ro
     artifact_root = Path(
         artifact_root or os.getenv("RECOMMENDER_ARTIFACT_DIR", "recommender_lab/artifacts")
     )
-    version = datetime.now(timezone.utc).strftime("v%Y%m%dT%H%M%SZ")
+    version = datetime.now(timezone.utc).strftime("v%Y%m%dT%H%M%S%fZ")
     version_dir = artifact_root / version
     version_dir.mkdir(parents=True, exist_ok=False)
 
     feature_builder = RecommenderLab(products, artifact_root=artifact_root, load_models=False)
 
-    # XGBoost learns to order the four graded ESCI labels within each query.
+    # Train a graded ranker over all four ESCI labels.
     xgb_train, xgb_valid = _group_split(pairs)
     x_train = feature_builder.build_pair_features(xgb_train)
     x_valid = feature_builder.build_pair_features(xgb_valid)
@@ -168,8 +159,7 @@ def train_from_files(examples_path, products_path, feedback_df=None, artifact_ro
     )
     ranker.save_model(str(version_dir / "xgb_ranker.json"))
 
-    # The first two-tower run uses only clear E/I pairs; S and C are not forced
-    # into either binary class. Limit negatives per query to reduce imbalance.
+    # Start the two-tower model with clear E/I pairs; do not label S/C as negatives.
     binary = pairs[pairs["esci_label"].isin(LABEL_TO_BINARY)].copy()
     positives = binary[binary["esci_label"] == "E"]
     negatives = binary[binary["esci_label"] == "I"]
@@ -185,19 +175,21 @@ def train_from_files(examples_path, products_path, feedback_df=None, artifact_ro
             )
     if not sampled_negatives:
         raise ValueError("Two-tower training needs both E positives and I negatives.")
+
     binary = pd.concat([positives, *sampled_negatives], ignore_index=True)
     binary["label"] = binary["esci_label"].map(LABEL_TO_BINARY).astype(np.float32)
     tower_train, tower_valid = _group_split(binary)
 
-    vocab_counter = {}
-    for text in pd.concat(
+    token_counts = {}
+    vocab_texts = pd.concat(
         [tower_train["query"], tower_train["product_title"]], ignore_index=True
-    ):
+    )
+    for text in vocab_texts:
         for token in tokenize(text):
-            vocab_counter[token] = vocab_counter.get(token, 0) + 1
+            token_counts[token] = token_counts.get(token, 0) + 1
 
     vocab = {"<PAD>": 0, "<UNK>": 1}
-    for token, _ in sorted(vocab_counter.items(), key=lambda item: (-item[1], item[0]))[:49_998]:
+    for token, _ in sorted(token_counts.items(), key=lambda item: (-item[1], item[0]))[:49_998]:
         vocab[token] = len(vocab)
 
     def encode(text, max_length):
@@ -205,12 +197,14 @@ def train_from_files(examples_path, products_path, feedback_df=None, artifact_ro
         return ids + [0] * (max_length - len(ids))
 
     def encode_frame(frame):
-        q = np.asarray([encode(text, 32) for text in frame["query"]], dtype=np.int32)
-        p = np.asarray(
+        query_ids = np.asarray(
+            [encode(text, 32) for text in frame["query"]], dtype=np.int32
+        )
+        title_ids = np.asarray(
             [encode(text, 64) for text in frame["product_title"]], dtype=np.int32
         )
-        y = frame["label"].to_numpy(dtype=np.float32).reshape(-1, 1)
-        return q, p, y
+        labels = frame["label"].to_numpy(dtype=np.float32).reshape(-1, 1)
+        return query_ids, title_ids, labels
 
     train_q, train_p, train_y = encode_frame(tower_train)
     valid_q, valid_p, valid_y = encode_frame(tower_valid)
@@ -234,15 +228,15 @@ def train_from_files(examples_path, products_path, feedback_df=None, artifact_ro
         [query_tower(query_input), product_tower(product_input)]
     )
     logits = tf.keras.layers.Rescaling(10.0, name="scaled_similarity")(similarity)
-    two_tower = tf.keras.Model([query_input, product_input], logits)
-    two_tower.compile(
+    model = tf.keras.Model([query_input, product_input], logits)
+    model.compile(
         optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
         loss=tf.keras.losses.BinaryCrossentropy(from_logits=True),
     )
     early_stop = tf.keras.callbacks.EarlyStopping(
         monitor="val_loss", patience=2, restore_best_weights=True
     )
-    two_tower.fit(
+    model.fit(
         [train_q, train_p],
         train_y,
         validation_data=([valid_q, valid_p], valid_y),
@@ -270,7 +264,7 @@ def train_from_files(examples_path, products_path, feedback_df=None, artifact_ro
         embeddings=np.asarray(embeddings, dtype=np.float32),
     )
 
-    # Publish the version only after all artifacts have been written.
+    # Switch the active pointer only after both models and the product index exist.
     pointer_tmp = artifact_root / "current.json.tmp"
     pointer_tmp.write_text(json.dumps({"version": version}), encoding="utf-8")
     pointer_tmp.replace(artifact_root / "current.json")
@@ -290,11 +284,7 @@ def main():
     except Exception:
         pass
 
-    version = train_from_files(
-        examples_path,
-        products_path,
-        feedback_df=feedback,
-    )
+    version = train_from_files(examples_path, products_path, feedback_df=feedback)
     print(f"Published recommender artifacts: {version}")
 
 
