@@ -43,19 +43,12 @@ The API key is read from the environment and is never written to SQLite.
 
 ## Run
 
-First train the initial XGBoost and two-tower artifacts:
+Open recommender_lab/training_workbench.ipynb in VS Code or Jupyter with the project's Python 3.10 environment. Update the dataset paths in its first code cell and run the notebook. It trains the initial models when no active model exists. Later, it trains again when SQLite has at least 1,000 new unique query-product labels. Set FORCE_TRAIN = True in the notebook to intentionally override that threshold.
 
-\`\`\`powershell
-python -m recommender_lab.train
-\`\`\`
+Start the two Streamlit apps in separate terminals:
 
-Run these in separate terminals:
-
-\`\`\`powershell
-python -m recommender_lab.worker
-streamlit run recommender_lab/customer_app.py
-streamlit run recommender_lab/dashboard_app.py
-\`\`\`
+- streamlit run recommender_lab/customer_app.py
+- streamlit run recommender_lab/dashboard_app.py
 
 The customer app shows results from token overlap, fuzzy matching, character TF-IDF, word TF-IDF, BM25, XGBoost, and the two-tower model when their artifacts are available. Use its synthetic-feedback button to have the configured LLM label displayed products.
 
