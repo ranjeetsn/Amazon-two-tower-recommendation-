@@ -4,7 +4,13 @@ import streamlit as st
 
 from recommender_lab.llm_judge import judge_products
 from recommender_lab.recommenders import RecommenderLab, load_products
-from recommender_lab.storage import init_db, record_feedback, record_search
+from recommender_lab.storage import (
+    init_db,
+    mark_search_failed,
+    record_feedback,
+    record_query,
+    record_recommendations,
+)
 
 
 st.set_page_config(page_title="Recommender Customer Simulator", layout="wide")
@@ -22,8 +28,9 @@ def get_lab():
 
 st.title("Product search: model comparison")
 st.caption(
-    "Local experiment. One query is scored by every available approach; "
-    "the synthetic judge is an LLM relevance simulator, not a real customer."
+    "Local experiment. One query is saved to SQLite first, then scored by every "
+    "available approach. The synthetic judge is an LLM relevance simulator, "
+    "not a real customer."
 )
 
 if st.sidebar.button("Reload model artifacts"):
@@ -40,28 +47,41 @@ query = st.text_input("What product are you looking for?", key="query_input")
 top_k = st.slider("Products per approach", min_value=3, max_value=20, value=10)
 
 if st.button("Search all approaches", type="primary", disabled=not query.strip()):
+    query_text = query.strip()
+    st.session_state.pop("current_run", None)
+    st.session_state.pop("current_ratings", None)
+    request_id = None
+
     try:
-        results_by_model = lab.recommend_all(query.strip(), k=top_k)
-        request_id = record_search(
-            query.strip(),
+        # Persist the input event before any model performs inference.
+        request_id = record_query(query_text)
+        results_by_model = lab.recommend_all(query_text, k=top_k)
+        record_recommendations(
+            request_id,
             results_by_model,
             model_version=lab.model_version,
         )
         st.session_state["current_run"] = {
             "request_id": request_id,
-            "query": query.strip(),
+            "query": query_text,
             "results": results_by_model,
             "version": lab.model_version,
         }
-        st.session_state.pop("current_ratings", None)
     except Exception as exc:
-        st.exception(exc)
+        if request_id:
+            mark_search_failed(request_id, exc)
+            st.error(
+                f"Query was saved as {request_id}, but recommendation generation "
+                f"failed: {exc}"
+            )
+        else:
+            st.error(f"Could not save the query: {exc}")
 
 current = st.session_state.get("current_run")
 if current:
     st.info(
-        f"Saved query {current['request_id']} using artifact version "
-        f"{current['version']}."
+        f"Saved query {current['request_id']} and recommendations using artifact "
+        f"version {current['version']}."
     )
 
     methods = list(current["results"])
