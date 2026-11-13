@@ -211,9 +211,19 @@ def record_feedback(request_id, ratings, source="llm_simulated"):
 
 
 def feedback_count():
+    """Count unique query-product pairs, regardless of feedback source."""
     init_db()
     with connect() as conn:
-        return conn.execute("SELECT COUNT(*) FROM feedback").fetchone()[0]
+        return conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM (
+                SELECT request_id, product_id
+                FROM feedback
+                GROUP BY request_id, product_id
+            )
+            """
+        ).fetchone()[0]
 
 
 def last_trained_feedback_count():
