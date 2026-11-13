@@ -1,0 +1,8 @@
+pandas
+pyarrow
+scikit-learn
+rapidfuzz
+xgboost
+tensorflow==2.15.0
+streamlit
+requests
