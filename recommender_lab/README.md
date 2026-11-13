@@ -6,9 +6,9 @@ This experiment adds lexical, supervised-ranking, and two-tower approaches besid
 
 - Customer Streamlit app writes each query to SQLite before calling any ranker, then stores each model's displayed products and marks the search complete. A failed ranking attempt remains logged with its error.
 - An optional LLM judge assigns ESCI-style labels to the unique products shown for that query. These are synthetic relevance labels, not real customer outcomes.
-- A separate worker watches SQLite. After 1,000 new unique labeled query-product pairs, it retrains the XGBoost ranker and two-tower model, writes a versioned artifact directory, then updates the active-version pointer.
+- Model training runs only when you execute the training notebook. It reads the Kaggle training data plus saved feedback from SQLite. After 1,000 new unique labeled query-product pairs, the dashboard marks retraining as ready.
 - Dashboard Streamlit app reads the same SQLite database and reports recommendation and feedback results.
-- Kafka is intentionally not required for this single-machine simulation. SQLite is the durable event log; the worker is the asynchronous consumer. Kafka can replace the event handoff if the system later needs multiple independent consumers, replay, or distributed deployment.
+- Kafka is intentionally not required for this single-machine simulation. SQLite is the durable interaction log; the notebook reads it when you choose to retrain. Kafka may be useful later for multiple independent consumers, replay, or distributed deployment.
 
 ## Data
 
@@ -59,7 +59,7 @@ streamlit run recommender_lab/dashboard_app.py
 
 The customer app shows results from token overlap, fuzzy matching, character TF-IDF, word TF-IDF, BM25, XGBoost, and the two-tower model when their artifacts are available. Use its synthetic-feedback button to have the configured LLM label displayed products.
 
-The worker counts unique labeled query-product pairs since the last successful training run. It retrains when the count reaches 1,000, then records the completed feedback count. It does not run training inside the request handler.
+The notebook snapshots the feedback count at training start and records it after a successful run. Feedback arriving while training is in progress remains pending for the next notebook run.
 
 ## Label and evaluation notes
 
