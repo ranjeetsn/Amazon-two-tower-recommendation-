@@ -34,7 +34,9 @@ def init_db():
             CREATE TABLE IF NOT EXISTS searches (
                 request_id TEXT PRIMARY KEY,
                 query TEXT NOT NULL,
-                created_at TEXT NOT NULL
+                created_at TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'ranking',
+                error TEXT NOT NULL DEFAULT ''
             );
 
             CREATE TABLE IF NOT EXISTS recommendations (
@@ -80,35 +82,71 @@ def init_db():
                 ON feedback(created_at);
             """
         )
+
+        # Migrate databases created by earlier versions of the local lab.
+        search_columns = {
+            row["name"] for row in conn.execute("PRAGMA table_info(searches)")
+        }
+        if "status" not in search_columns:
+            # Older rows were only written after ranking completed.
+            conn.execute(
+                "ALTER TABLE searches ADD COLUMN status TEXT NOT NULL DEFAULT 'complete'"
+            )
+        if "error" not in search_columns:
+            conn.execute(
+                "ALTER TABLE searches ADD COLUMN error TEXT NOT NULL DEFAULT ''"
+            )
+
         conn.execute(
-            "INSERT OR IGNORE INTO app_state(key, value) VALUES('last_trained_feedback_count', '0')"
+            "INSERT OR IGNORE INTO app_state(key, value) "
+            "VALUES('last_trained_feedback_count', '0')"
         )
 
 
-def record_search(query, results_by_model, model_version="baseline"):
+def record_query(query):
+    """Persist the incoming query before any recommendation model is called."""
+    query = str(query).strip()
+    if not query:
+        raise ValueError("Query cannot be empty.")
+
     init_db()
     request_id = str(uuid.uuid4())
-    created_at = utc_now()
-
     with connect() as conn:
         conn.execute(
-            "INSERT INTO searches(request_id, query, created_at) VALUES (?, ?, ?)",
-            (request_id, query, created_at),
+            """
+            INSERT INTO searches(request_id, query, created_at, status)
+            VALUES (?, ?, ?, 'ranking')
+            """,
+            (request_id, query, utc_now()),
         )
-        rows = []
-        for model_name, results in results_by_model.items():
-            for rank, item in enumerate(results, start=1):
-                rows.append(
-                    (
-                        request_id,
-                        model_name,
-                        model_version,
-                        str(item["product_id"]),
-                        str(item.get("product_title", "")),
-                        rank,
-                        float(item.get("score", 0.0)),
-                    )
+    return request_id
+
+
+def record_recommendations(request_id, results_by_model, model_version="baseline"):
+    """Attach all model outputs to a previously logged query."""
+    init_db()
+    rows = []
+    for model_name, results in results_by_model.items():
+        for rank, item in enumerate(results, start=1):
+            rows.append(
+                (
+                    request_id,
+                    model_name,
+                    model_version,
+                    str(item["product_id"]),
+                    str(item.get("product_title", "")),
+                    rank,
+                    float(item.get("score", 0.0)),
                 )
+            )
+
+    with connect() as conn:
+        exists = conn.execute(
+            "SELECT 1 FROM searches WHERE request_id=?", (request_id,)
+        ).fetchone()
+        if exists is None:
+            raise ValueError(f"Unknown request_id: {request_id}")
+
         conn.executemany(
             """
             INSERT OR REPLACE INTO recommendations
@@ -117,7 +155,30 @@ def record_search(query, results_by_model, model_version="baseline"):
             """,
             rows,
         )
+        conn.execute(
+            "UPDATE searches SET status='complete', error='' WHERE request_id=?",
+            (request_id,),
+        )
 
+
+def mark_search_failed(request_id, error):
+    """Keep the query event and record why recommendation generation failed."""
+    init_db()
+    with connect() as conn:
+        conn.execute(
+            "UPDATE searches SET status='failed', error=? WHERE request_id=?",
+            (str(error)[:2000], request_id),
+        )
+
+
+def record_search(query, results_by_model, model_version="baseline"):
+    """Backward-compatible convenience wrapper for older callers."""
+    request_id = record_query(query)
+    try:
+        record_recommendations(request_id, results_by_model, model_version)
+    except Exception as exc:
+        mark_search_failed(request_id, exc)
+        raise
     return request_id
 
 
@@ -231,7 +292,9 @@ def mark_training_finished(
 def get_dashboard_frames():
     init_db()
     with connect() as conn:
-        searches = pd.read_sql_query("SELECT * FROM searches ORDER BY created_at DESC", conn)
+        searches = pd.read_sql_query(
+            "SELECT * FROM searches ORDER BY created_at DESC", conn
+        )
         recommendations = pd.read_sql_query(
             "SELECT * FROM recommendations ORDER BY request_id, model_name, rank",
             conn,
