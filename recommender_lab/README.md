@@ -1,0 +1,69 @@
+# Local ESCI recommender lab
+
+This experiment adds lexical, supervised-ranking, and two-tower approaches beside the existing demo without changing its FastAPI service.
+
+## Local architecture
+
+- Customer Streamlit app accepts a query, runs every available ranker, and stores the query plus each model's displayed products in SQLite.
+- An optional LLM judge assigns ESCI-style labels to the unique products shown for that query. These are synthetic relevance labels, not real customer outcomes.
+- A separate worker watches SQLite. After 1,000 new labeled query-product pairs, it retrains the XGBoost ranker and two-tower model, writes a versioned artifact directory, then updates the active-version pointer.
+- Dashboard Streamlit app reads the same SQLite database and reports recommendation and feedback results.
+- Kafka is intentionally not required for this single-machine simulation. SQLite is the durable event log; the worker is the asynchronous consumer. Kafka can replace the event handoff if the system later needs multiple independent consumers, replay, or distributed deployment.
+
+## Data
+
+Set paths to the Kaggle ESCI files. Expected columns include:
+
+- Examples: \`query_id\`, \`query\`, \`product_id\`, \`esci_label\` (E/S/C/I)
+- Products: \`product_id\`, \`product_title\`; optional \`product_brand\`
+
+The loader accepts CSV and Parquet. Keep the provided official train/test split intact; the training script trains on rows with split=train when that column exists.
+
+## Setup (Python 3.10)
+
+The existing repository pins TensorFlow 2.15, so use the repository's Python 3.10 environment.
+
+\`\`\`powershell
+python -m pip install -r recommender_lab/requirements.txt
+$env:ESCI_EXAMPLES_PATH = "C:\data\shopping_queries_dataset_examples.parquet"
+$env:ESCI_PRODUCTS_PATH = "C:\data\shopping_queries_dataset_products.parquet"
+$env:RECOMMENDER_DB_PATH = "recommender_lab\data\interactions.sqlite3"
+$env:RECOMMENDER_ARTIFACT_DIR = "recommender_lab\artifacts"
+\`\`\`
+
+For LLM-generated simulation labels, configure an OpenAI-compatible chat-completions endpoint:
+
+\`\`\`powershell
+$env:LLM_CHAT_COMPLETIONS_URL = "https://api.openai.com/v1/chat/completions"
+$env:LLM_API_KEY = "<your key>"
+$env:LLM_MODEL = "<your model>"
+\`\`\`
+
+The API key is read from the environment and is never written to SQLite.
+
+## Run
+
+First train the initial XGBoost and two-tower artifacts:
+
+\`\`\`powershell
+python -m recommender_lab.train
+\`\`\`
+
+Run these in separate terminals:
+
+\`\`\`powershell
+python -m recommender_lab.worker
+streamlit run recommender_lab/customer_app.py
+streamlit run recommender_lab/dashboard_app.py
+\`\`\`
+
+The customer app shows results from token overlap, fuzzy matching, character TF-IDF, word TF-IDF, BM25, XGBoost, and the two-tower model when their artifacts are available. Use its synthetic-feedback button to have the configured LLM label displayed products.
+
+The worker counts unique labeled query-product pairs since the last successful training run. It retrains when the count reaches 1,000, then records the completed feedback count. It does not run training inside the request handler.
+
+## Label and evaluation notes
+
+- E = exact match, S = substitute, C = complement, I = irrelevant.
+- The LLM simulation evaluates product-to-query relevance; it cannot represent personal taste or actual purchase satisfaction.
+- XGBoost uses graded relevance E=3, S=2, C=1, I=0. The two-tower starter model uses E as positive and I as negative, leaving S/C out rather than treating them as definite negatives.
+- Use actual user impressions and outcomes for production retraining. An unseen product is not a negative example.
