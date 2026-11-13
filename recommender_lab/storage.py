@@ -199,7 +199,13 @@ def mark_training_started(count):
         return cursor.lastrowid
 
 
-def mark_training_finished(run_id, status, model_version="", message=""):
+def mark_training_finished(
+    run_id,
+    status,
+    model_version="",
+    message="",
+    trained_through_feedback_count=None,
+):
     init_db()
     with connect() as conn:
         conn.execute(
@@ -211,12 +217,14 @@ def mark_training_finished(run_id, status, model_version="", message=""):
             (utc_now(), status, model_version, str(message)[:2000], int(run_id)),
         )
         if status == "succeeded":
-            current_count = conn.execute(
-                "SELECT COUNT(*) FROM feedback"
-            ).fetchone()[0]
+            trained_through = trained_through_feedback_count
+            if trained_through is None:
+                trained_through = conn.execute(
+                    "SELECT COUNT(*) FROM feedback"
+                ).fetchone()[0]
             conn.execute(
                 "UPDATE app_state SET value=? WHERE key='last_trained_feedback_count'",
-                (str(current_count),),
+                (str(int(trained_through)),),
             )
 
 
