@@ -183,7 +183,6 @@ def load_training_feedback():
         )
     if frame.empty:
         return frame
-    # Prefer human labels if both human and synthetic labels exist for a pair.
     return frame.drop_duplicates(["query_id", "product_id"], keep="first")
 
 
@@ -212,9 +211,12 @@ def mark_training_finished(run_id, status, model_version="", message=""):
             (utc_now(), status, model_version, str(message)[:2000], int(run_id)),
         )
         if status == "succeeded":
+            current_count = conn.execute(
+                "SELECT COUNT(*) FROM feedback"
+            ).fetchone()[0]
             conn.execute(
                 "UPDATE app_state SET value=? WHERE key='last_trained_feedback_count'",
-                (str(feedback_count()),),
+                (str(current_count),),
             )
 
 
