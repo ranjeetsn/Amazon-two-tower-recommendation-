@@ -4,9 +4,9 @@ This experiment adds lexical, supervised-ranking, and two-tower approaches besid
 
 ## Local architecture
 
-- Customer Streamlit app accepts a query, runs every available ranker, and stores the query plus each model's displayed products in SQLite.
+- Customer Streamlit app writes each query to SQLite before calling any ranker, then stores each model's displayed products and marks the search complete. A failed ranking attempt remains logged with its error.
 - An optional LLM judge assigns ESCI-style labels to the unique products shown for that query. These are synthetic relevance labels, not real customer outcomes.
-- A separate worker watches SQLite. After 1,000 new labeled query-product pairs, it retrains the XGBoost ranker and two-tower model, writes a versioned artifact directory, then updates the active-version pointer.
+- A separate worker watches SQLite. After 1,000 new unique labeled query-product pairs, it retrains the XGBoost ranker and two-tower model, writes a versioned artifact directory, then updates the active-version pointer.
 - Dashboard Streamlit app reads the same SQLite database and reports recommendation and feedback results.
 - Kafka is intentionally not required for this single-machine simulation. SQLite is the durable event log; the worker is the asynchronous consumer. Kafka can replace the event handoff if the system later needs multiple independent consumers, replay, or distributed deployment.
 
