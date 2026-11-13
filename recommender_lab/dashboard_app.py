@@ -89,7 +89,7 @@ col3.metric("New labels since training", f"{new_count} / {threshold}")
 col4.metric("Training status", training_runs.iloc[0]["status"] if not training_runs.empty else "not run")
 
 if new_count >= threshold:
-    st.warning("The retraining worker has enough new labels to start a training run.")
+    st.warning("Enough new labels are available. Run recommender_lab/training_workbench.ipynb to retrain the models.")
 
 st.subheader("Ranking quality by approach")
 metrics = model_ndcg(feedback, recommendations)
